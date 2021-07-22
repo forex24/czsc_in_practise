@@ -4,25 +4,33 @@
 """
 
 import pandas as pd
+import numpy as np
+import re
 
-######################## compare method ###############################
+
+# compare method #
 
 def float_less(a, b):
     return a < b and not np.isclose(a, b)
 
+
 def float_more(a, b):
     return a > b and not np.isclose(a, b)
+
 
 def float_less_equal(a, b):
     return a < b or np.isclose(a, b)
 
+
 def float_more_equal(a, b):
     return a > b or np.isclose(a, b)
+
 
 def is_in_range(a, b, n):
     """判断数字n是否在区间[a, b]内"""
     assert float_less(a, b)
-    return a < n < b3
+    return a < n < b
+
 
 def is_overlap(a, b):
     """
@@ -35,6 +43,7 @@ def is_overlap(a, b):
     False 不重叠
     """
     return max(a[0], b[0]) <= min(a[1], b[1])
+
 
 def __symbol_2_jq(symbol):
     """
@@ -50,6 +59,7 @@ def __symbol_2_jq(symbol):
         return '{}.XSHG'.format(code)
     return '{}.XSHE'.format(code)
 
+
 def __symbol_2_ts(symbol):
     """
     将标的代码格式化成Tushare代码格式，目前只支持A股
@@ -64,6 +74,7 @@ def __symbol_2_ts(symbol):
         return '{}.SH'.format(code)
     return '{}.SZ'.format(code)
 
+
 def __bars_from_jq(symbol, df_klines):
     """
     将聚宽的get_bars数据归一化成本程序标准
@@ -74,13 +85,14 @@ def __bars_from_jq(symbol, df_klines):
     归一化后的k线数据，包含列 'symbol', 'dt', 'open', 'close', 'high', 'low', 'vol'
     """
     df_klines['symbol'] = symbol
-    df_klines.rename({ 'date': 'dt', 'volume': 'vol'}, axis=1, inplace=True)
+    df_klines.rename({'date': 'dt', 'volume': 'vol'}, axis=1, inplace=True)
     df_klines.reset_index(drop=True, inplace=True)
     df_klines = df_klines[['symbol', 'dt', 'open', 'close', 'high', 'low', 'vol']]
     for col in ['open', 'close', 'high', 'low', 'vol']:
         df_klines.loc[:, col] = df_klines[col].apply(lambda x: round(float(x), 2))
     df_klines.loc[:, "dt"] = pd.to_datetime(df_klines['dt'])
     return df_klines
+
 
 def __bars_from_ts(self, symbol, df_klines):
     """
@@ -99,6 +111,7 @@ def __bars_from_ts(self, symbol, df_klines):
     df_klines.loc[:, "dt"] = pd.to_datetime(df_klines['dt'])
     return df_klines
 
+
 def normalize_symbol(symbol, to_):
     """
     标的代码转换
@@ -114,6 +127,7 @@ def normalize_symbol(symbol, to_):
         return __symbol_2_ts(symbol)
     else:
         raise ValueError
+
 
 def normalize_kbars(symbol, kbars, data_from):
     """
@@ -131,6 +145,7 @@ def normalize_kbars(symbol, kbars, data_from):
     else:
         raise ValueError
 
+
 def get_kbars(kline_raw, cur_freq, nxt_freq):
     """
     https://www.joinquant.com/view/community/detail/f05b9cbce3612bb2fad36740551d28be?type=1
@@ -147,7 +162,7 @@ def get_kbars(kline_raw, cur_freq, nxt_freq):
     if cur_freq_unit != 'm' or nxt_freq_unit != 'm':
         print('目前只支持分钟级别聚合，1d行情请用240m')
         raise ValueError
-    
+
     cur_freq_val = int(cur_freq[0:-1])
     nxt_freq_val = int(nxt_freq[0:-1])
     if cur_freq_val >= nxt_freq_val or nxt_freq_val % cur_freq_val != 0:
@@ -156,7 +171,7 @@ def get_kbars(kline_raw, cur_freq, nxt_freq):
     interval = (int)(nxt_freq_val / cur_freq_val)
 
     kbars_new = []
-    start_index=0
+    start_index = 0
     for index in range(interval, len(kline_raw), interval):
         cur_index = index - 1
         kline = kline_raw[cur_index]
@@ -164,8 +179,8 @@ def get_kbars(kline_raw, cur_freq, nxt_freq):
         kline['low'] = min([x['low'] for x in kline_raw[start_index:cur_index]])
         kline['vol'] = sum([x['vol'] for x in kline_raw[start_index:cur_index]])
         kbars_new.append(kline)
-        start_index=index
-    
+        start_index = index
+
     if start_index < len(kline_raw):
         kline = kline_raw[-1]
         kline['high'] = max([x['high'] for x in kline_raw[start_index:len(kline_raw)]])
